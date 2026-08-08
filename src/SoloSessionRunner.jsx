@@ -61,18 +61,78 @@ const BLANK = {
   archive: [],
 };
 const KEY = "solo-runner:campaign";
+const UIKEY = "solo-runner:ui";
+const BLANK_UI = { closed: {}, orientation: false };
 const d = (n) => Math.floor(Math.random() * n) + 1;
 
+/* ---------- help copy ----------
+   Plain instructional voice: what to do here, and what blocks you.
+   Keys match Panel `helpId` (falling back to `title`). */
+const HELP = {
+  "O1 · Recap": "Read last session's verdict and hook to get back into the fiction. Nothing to fill in. If this is your first session it will be empty — that is fine, keep going down the page.",
+  "O2 · State check": "PC status is where your character stands right now: wounds, supplies, position. World status is what moved while you were away. Both carry over between sessions and are what let you start warm instead of re-deriving everything. Write them once now; you will get a chance to update them when you land the session.",
+  "O3 · Tick the world": "Answer the questions you left yourself last session, before you have a plan. Roll the oracle for each one and write the answer as yes,and / yes,but / no,but / no,and — never a bare yes or no. Answering cold stops you steering the world toward what you already want.",
+  "O4 · Declare intent": "One sentence saying what you are trying to achieve this session, phrased so it can fail. Follow the template above the box. You cannot start playing without it — a session with no falsifiable goal has no ending.",
+  Clocks: "Progress bars for pressure happening offscreen: a pursuit closing in, a ritual completing. Name it, then click segments to fill or unfill. The first clock ticks automatically every second scene. Optional; up to 4.",
+  Threads: "Your open questions — the things the campaign is actually about. Click the square to close a thread when it is answered. Capped at 6 open, because past six you stop choosing and start dithering.",
+  Cast: "People who exist and what they want. Pull from this list when a scene needs a face, rather than inventing someone new each time. Optional; up to 10.",
+  scene: "Set the frame before you play: where you are (one sensory detail), who is present, what you want in this scene (smaller than the session intent), and why it has to happen now. The complication is rolled for you — reroll it if it does not fit. Fill 'why now' or the scene will drift.",
+  Oracle: "Ask the world a closed question. Pick how likely a yes is, press Ask, and read the answer. Every answer carries an obligation — name the cost, bonus, escalation or consolation before you move on. Bare yes/no is deliberately not on the table.",
+  "Pacing move": "Press Fire when the scene stalls and you do not know what happens next. It hands you something that moves the fiction. Use it instead of asking the oracle another question.",
+  "Failure move": "Press Fire when your own system says you failed a roll. It tells you how the failure bites, so failure costs something instead of stopping play.",
+  "Log · one line, now": "Write what happened and what changed, in one line, before you resolve. Then pick the outcome: Won, Denied, Pivot or Cost. The outcome adjusts the tension track at the top automatically. You cannot resolve without the log line.",
+  "This session": "Scenes you have already resolved, in order. Read-only.",
+  "L1 · Cut point": "Guidance only, nothing to fill in. Stop on a decision, a door, or a revelation — never with everything calm and never mid-fight.",
+  "L2 · Answer the intent": "Say plainly whether you achieved the intent you declared at the start: Yes, No, or Complicated. Required to close.",
+  "L3 · Log": "Up to five bullets, one line each. Write only what you will need next time — not a transcript.",
+  "L4 · Deltas": "Update PC status and World status to where they stand now. These are pre-filled with what you wrote at OPEN; edit them. What you leave here is what greets you next session.",
+  "L6 · Seed": "The most important step. Write next session's intent, at least two cold questions about the world (not about your choices), and one hook — an image, a line, a threat. Required to close, because starting cold is the main reason solo campaigns get abandoned.",
+};
+
+const ORIENTATION = [
+  "This app runs the session; it does not run the rules. Bring whatever RPG system you already use for rolls and combat — the app never touches them.",
+  "Every session is three phases. OPEN: check where things stand and declare one goal that can fail. RUN: play 3–5 scenes, asking the oracle when you do not know an answer, logging one line per scene. LAND: answer whether you hit the goal, then leave yourself a seed for next time.",
+  "The bar at the top right is tension, 1–9. It moves on its own as you resolve scenes; use it to judge how hard to push. Click it to override.",
+  "Three things are enforced: an intent before you play, a log line before you resolve a scene, and a seed before you close. Everything else is optional.",
+  "Work top to bottom. Press ? on any panel for what that panel wants.",
+];
+
 /* ---------- primitives ---------- */
-const Panel = ({ title, tag, children }) => (
-  <div className="border border-stone-800 bg-stone-900/60">
-    <div className="flex items-baseline justify-between border-b border-stone-800 px-3 py-1.5">
-      <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-stone-500">{title}</span>
-      {tag && <span className="font-mono text-[10px] text-amber-500/80">{tag}</span>}
+const HelpCtx = React.createContext({ closed: {}, toggle: () => {} });
+const Panel = ({ title, tag, helpId, children }) => {
+  const { closed, toggle } = React.useContext(HelpCtx);
+  const id = helpId || title;
+  const text = HELP[id];
+  const open = !!text && !closed[id];
+  return (
+    <div className="border border-stone-800 bg-stone-900/60">
+      <div className="flex items-baseline justify-between gap-2 border-b border-stone-800 px-3 py-1.5">
+        <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-stone-500">{title}</span>
+        <span className="flex shrink-0 items-baseline gap-2">
+          {tag && <span className="font-mono text-[10px] text-amber-500/80">{tag}</span>}
+          {text && (
+            <button
+              onClick={() => toggle(id)}
+              aria-expanded={open}
+              aria-label={`${open ? "Hide" : "Show"} help for ${title}`}
+              className={`h-4 w-4 border font-mono text-[10px] leading-none ${
+                open ? "border-teal-700 text-teal-400" : "border-stone-700 text-stone-500 hover:border-stone-500"
+              }`}
+            >
+              ?
+            </button>
+          )}
+        </span>
+      </div>
+      {open && (
+        <p className="border-b border-stone-800 bg-stone-950/60 px-3 py-2 text-xs leading-relaxed text-stone-400">{text}</p>
+      )}
+      <div className="p-3">{children}</div>
     </div>
-    <div className="p-3">{children}</div>
-  </div>
-);
+  );
+};
+// reason a disabled control is disabled, stated before the user clicks
+const Hint = ({ children }) => <p className="mt-1.5 font-mono text-[10px] text-stone-500">{children}</p>;
 const Field = ({ label, value, onChange, ph, rows }) => (
   <label className="block">
     <span className="mb-1 block font-mono text-[10px] uppercase tracking-[0.16em] text-stone-500">{label}</span>
@@ -117,6 +177,7 @@ const Btn = ({ children, onClick, tone = "ghost", disabled, small }) => {
 /* ---------- app ---------- */
 export default function SoloSessionRunner() {
   const [s, setS] = useState(null);
+  const [ui, setUi] = useState(null);
   const [err, setErr] = useState("");
   const [oracle, setOracle] = useState(null);
   const [odds, setOdds] = useState("even");
@@ -133,8 +194,21 @@ export default function SoloSessionRunner() {
       } catch {
         setS(BLANK);
       }
+      // help state lives under its own key so "reset campaign" does not re-teach you
+      try {
+        const u = await storage.get(UIKEY);
+        setUi(u ? { ...BLANK_UI, ...JSON.parse(u.value) } : BLANK_UI);
+      } catch {
+        setUi(BLANK_UI);
+      }
     })();
   }, []);
+
+  const putUi = (next) => {
+    setUi(next);
+    storage.set(UIKEY, JSON.stringify(next)).catch(() => {});
+  };
+  const toggleHelp = (id) => putUi({ ...ui, closed: { ...ui.closed, [id]: !ui.closed[id] } });
 
   const put = (next) => {
     setS(next);
@@ -152,11 +226,22 @@ export default function SoloSessionRunner() {
     return () => clearTimeout(timer.current);
   }, [s?.phase, s?.session?.scenes?.length, oracle, move]);
 
-  if (!s) return <div className="min-h-screen bg-stone-950 p-6 font-mono text-xs text-stone-500">Loading campaign…</div>;
+  if (!s || !ui) return <div className="min-h-screen bg-stone-950 p-6 font-mono text-xs text-stone-500">Loading campaign…</div>;
 
   const sess = s.session;
   const scene = sess?.scene;
   const sceneCount = sess?.scenes?.length ?? 0;
+
+  /* ----- block reasons: stated up front, not after a failed click ----- */
+  const noIntent = !sess?.intent?.trim();
+  const noLog = !scene?.log?.trim();
+  const seedQs = sess?.seedQ || ["", "", ""];
+  const seedMissing = [
+    !sess?.seedIntent?.trim() && "next intent",
+    seedQs.filter((x) => x.trim()).length < 2 && "two cold questions",
+    !sess?.seedHook?.trim() && "a hook",
+    !sess?.verdict && "an answer to the intent (L2)",
+  ].filter(Boolean);
 
   /* ----- actions ----- */
   const startSession = () => {
@@ -268,9 +353,36 @@ export default function SoloSessionRunner() {
           </div>
         </div>
         <div className="font-mono text-2xl text-amber-500">{s.tension}</div>
+        <Btn small onClick={() => putUi({ closed: {}, orientation: false })}>
+          guide
+        </Btn>
       </div>
     </div>
   );
+
+  const Orientation = () =>
+    ui.orientation ? null : (
+      <div className="mb-3 border border-teal-900 bg-teal-950/20 px-3 py-3">
+        <div className="mb-2 flex items-baseline justify-between gap-2">
+          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-teal-500">How this works</span>
+          <button
+            onClick={() => putUi({ ...ui, orientation: true })}
+            className="shrink-0 border border-stone-700 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-stone-400 hover:border-stone-500"
+          >
+            got it
+          </button>
+        </div>
+        <ol className="space-y-1.5 text-xs leading-relaxed text-stone-400">
+          {ORIENTATION.map((t, i) => (
+            <li key={i} className="flex gap-2">
+              <span className="font-mono text-[10px] text-teal-700">{i + 1}</span>
+              <span>{t}</span>
+            </li>
+          ))}
+        </ol>
+        <p className="mt-2 font-mono text-[10px] text-stone-600">Bring this back any time with “guide” in the header.</p>
+      </div>
+    );
 
   const Clocks = () => (
     <Panel title="Clocks" tag={`${s.clocks.length}/4`}>
@@ -382,9 +494,11 @@ export default function SoloSessionRunner() {
   );
 
   return (
+    <HelpCtx.Provider value={{ closed: ui.closed, toggle: toggleHelp }}>
     <div className="min-h-screen bg-stone-950 px-4 py-6 text-stone-300">
       <div className="mx-auto max-w-3xl">
         <Header />
+        <Orientation />
         {err && (
           <div className="mb-3 border border-rose-900 bg-rose-950/50 px-3 py-2 font-mono text-[11px] text-rose-300">
             {err}
@@ -474,9 +588,12 @@ export default function SoloSessionRunner() {
                     ph="Kess will try to bribe the night registrar so she learns which ship carried the relic."
                   />
                 </Panel>
-                <Btn tone="go" onClick={startSession}>
-                  Frame scene 1 →
-                </Btn>
+                <div>
+                  <Btn tone="go" onClick={startSession} disabled={noIntent}>
+                    Frame scene 1 →
+                  </Btn>
+                  {noIntent && <Hint>Needs an intent above — one sentence that could turn out false.</Hint>}
+                </div>
               </>
             )}
           </div>
@@ -511,7 +628,7 @@ export default function SoloSessionRunner() {
               </div>
             )}
 
-            <Panel title={`Scene ${sceneCount + 1} · Frame`} tag={scene.complication}>
+            <Panel title={`Scene ${sceneCount + 1} · Frame`} helpId="scene" tag={scene.complication}>
               <div className="grid gap-2 md:grid-cols-2">
                 <Field label="Where" value={scene.where} onChange={(v) => patchSession({ scene: { ...scene, where: v } })} ph="one sensory detail" />
                 <Field label="Who" value={scene.who} onChange={(v) => patchSession({ scene: { ...scene, who: v } })} ph="pull from cast first" />
@@ -574,12 +691,13 @@ export default function SoloSessionRunner() {
               />
               <div className="mt-3 flex flex-wrap gap-2">
                 {RESOLVE.map((r) => (
-                  <Btn key={r.k} onClick={() => resolveScene(r.k)}>
+                  <Btn key={r.k} onClick={() => resolveScene(r.k)} disabled={noLog}>
                     {r.label}
                     <span className="ml-1 text-stone-600">{r.t > 0 ? "+1" : r.t < 0 ? "−1" : "0"}</span>
                   </Btn>
                 ))}
               </div>
+              {noLog && <Hint>Write the log line above to resolve this scene.</Hint>}
               <p className="mt-2 font-mono text-[10px] text-stone-600">
                 {RESOLVE.map((r) => `${r.label}: ${r.note}`).join(" · ")}
               </p>
@@ -598,9 +716,12 @@ export default function SoloSessionRunner() {
               </Panel>
             )}
 
-            <Btn tone="cut" onClick={land}>
-              Land the session →
-            </Btn>
+            <div>
+              <Btn tone="cut" onClick={land} disabled={sceneCount < 1}>
+                Land the session →
+              </Btn>
+              {sceneCount < 1 && <Hint>Resolve at least one scene first.</Hint>}
+            </div>
           </div>
         )}
 
@@ -675,11 +796,14 @@ export default function SoloSessionRunner() {
               </div>
             </Panel>
 
-            <div className="flex gap-2">
-              <Btn onClick={() => patch({ phase: "run" })}>← back to play</Btn>
-              <Btn tone="go" onClick={closeSession}>
-                Close session
-              </Btn>
+            <div>
+              <div className="flex gap-2">
+                <Btn onClick={() => patch({ phase: "run" })}>← back to play</Btn>
+                <Btn tone="go" onClick={closeSession} disabled={seedMissing.length > 0}>
+                  Close session
+                </Btn>
+              </div>
+              {seedMissing.length > 0 && <Hint>Still needed: {seedMissing.join(", ")}.</Hint>}
             </div>
           </div>
         )}
@@ -696,5 +820,6 @@ export default function SoloSessionRunner() {
         </div>
       </div>
     </div>
+    </HelpCtx.Provider>
   );
 }

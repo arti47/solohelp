@@ -20,11 +20,8 @@ System-agnostic: your resolution mechanics live inside the PLAY step, untouched.
    git push -u origin main
    ```
 
-3. Generate the lockfile the workflow needs (`npm ci` requires it):
-   ```bash
-   npm install
-   git add package-lock.json && git commit -m "add lockfile" && git push
-   ```
+3. Keep `package-lock.json` committed — `setup-node`'s `cache: npm` and `npm ci`
+   both fail without it, before the build runs. Regenerate with `npm install`.
 
 4. Repo → **Settings → Pages → Build and deployment → Source: GitHub Actions**.
 
@@ -59,6 +56,18 @@ component is portable between the two environments unchanged.
 Storage is per-origin and per-device. No sync, no backend. **Reset campaign**
 at the bottom of the page wipes it. Add an export button before you care about
 a campaign you'd hate to lose.
+
+## In-app help
+
+Every panel carries a `?` toggle with plain instructions for that step. Help is
+expanded by default and stays collapsed per panel once you dismiss it. A
+first-run orientation block above O1 explains the OPEN/RUN/LAND loop; **guide**
+in the header brings both back. Blocked actions state their reason under the
+disabled button rather than only after you click.
+
+Help state lives in `solo-runner:ui`, separate from campaign data, so **reset
+campaign** does not re-teach you. Copy lives in `HELP` / `ORIENTATION` at the top
+of `src/SoloSessionRunner.jsx`.
 
 ## Enforcement rules (why the UI blocks you)
 
