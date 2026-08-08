@@ -5,7 +5,7 @@ import { VitePWA } from "vite-plugin-pwa";
 
 // REPO must match your GitHub repository name exactly.
 // User/org site (username.github.io) -> set REPO = "".
-const REPO = "solo-session-runner";
+const REPO = "solohelp";
 
 export default defineConfig({
   base: REPO ? `/${REPO}/` : "/",
