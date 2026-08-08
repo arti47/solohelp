@@ -1,4 +1,4 @@
-# Solo Session Runner
+# Solo Session Runner 
 
 Installable PWA implementing the OPEN / RUN / LAND solo RPG session protocol.
 React 18 + Vite 6 + Tailwind 4 + vite-plugin-pwa. State persists in `localStorage`.
