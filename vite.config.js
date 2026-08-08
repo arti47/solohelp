@@ -9,6 +9,8 @@ const REPO = "solohelp";
 
 export default defineConfig({
   base: REPO ? `/${REPO}/` : "/",
+  // shown in the header, so "did my new version actually land?" is answerable
+  define: { __BUILD__: JSON.stringify(new Date().toISOString().slice(0, 16).replace("T", " ") + "Z") },
   plugins: [
     react(),
     tailwindcss(),

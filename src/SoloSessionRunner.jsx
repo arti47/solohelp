@@ -60,6 +60,7 @@ const BLANK = {
   session: null,
   archive: [],
 };
+const BUILD = typeof __BUILD__ === "string" ? __BUILD__ : "dev";
 const KEY = "solo-runner:campaign";
 const UIKEY = "solo-runner:ui";
 const BLANK_UI = { closed: {}, orientation: false };
@@ -337,6 +338,7 @@ export default function SoloSessionRunner() {
         <p className="font-mono text-[10px] tracking-[0.14em] text-stone-600">
           OPEN · RUN · LAND — session {s.sessionNo || "—"}
         </p>
+        <p className="font-mono text-[9px] tracking-[0.14em] text-stone-700">build {BUILD}</p>
       </div>
       <div className="flex items-center gap-4">
         <div className="text-right">

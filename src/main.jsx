@@ -8,3 +8,19 @@ createRoot(document.getElementById("root")).render(
     <SoloSessionRunner />
   </React.StrictMode>
 );
+
+// The SW is skipWaiting + clientsClaim, but `autoUpdate` only looks for a new
+// version on a fresh page load — an installed PWA that is never fully closed can
+// sit on a stale build indefinitely. Poll for one, and reload when it takes over.
+if ("serviceWorker" in navigator) {
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloading = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!hadController || reloading) return; // first install claims the page; that is not an update
+    reloading = true;
+    location.reload();
+  });
+  const check = () => navigator.serviceWorker.getRegistration().then((r) => r?.update()).catch(() => {});
+  setInterval(check, 60000);
+  document.addEventListener("visibilitychange", () => document.visibilityState === "visible" && check());
+}
